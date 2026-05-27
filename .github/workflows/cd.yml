@@ -1,0 +1,60 @@
+name: CD
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+jobs:
+  deploy:
+    name: Deploy to Target VM
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to target VM via SSH
+        env:
+          SSH_KEY: ${{ secrets.TARGET_SSH_KEY }}
+          TARGET_HOST: ${{ secrets.TARGET_HOST }}
+          TARGET_USER: ${{ secrets.TARGET_USER }}
+          IMAGE_TAG: ${{ github.ref_name }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$TARGET_HOST" >> ~/.ssh/known_hosts
+
+          ssh -i ~/.ssh/deploy_key "${TARGET_USER}@${TARGET_HOST}" bash <<EOF
+            set -euo pipefail
+            cd /opt/mywebapp
+            export IMAGE_TAG="${IMAGE_TAG}"
+            sed -i "s|image: ghcr.io/sonya010/devops_lab3:.*|image: ghcr.io/sonya010/devops_lab3:stable|g" docker-compose.yml
+            docker compose pull
+            docker compose up -d --remove-orphans
+            echo "Deployment done: tag=${IMAGE_TAG}"
+          EOF
+
+          rm -f ~/.ssh/deploy_key
+
+      - name: Verify deployment
+        env:
+          TARGET_HOST: ${{ secrets.TARGET_HOST }}
+          SSH_KEY: ${{ secrets.TARGET_SSH_KEY }}
+          TARGET_USER: ${{ secrets.TARGET_USER }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$TARGET_HOST" >> ~/.ssh/known_hosts
+
+          scp -i ~/.ssh/deploy_key deploy/verify.sh "${TARGET_USER}@${TARGET_HOST}:/tmp/verify.sh"
+          ssh -i ~/.ssh/deploy_key "${TARGET_USER}@${TARGET_HOST}" "bash /tmp/verify.sh localhost"
+
+          rm -f ~/.ssh/deploy_key
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "Deployment or verification failed!"
+          echo "Tag: ${{ github.ref_name }}"
