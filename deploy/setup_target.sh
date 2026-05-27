@@ -5,7 +5,7 @@ REPO_URL="https://github.com/Sonya010/DevOps_Lab3.git"
 APP_DIR="/opt/mywebapp"
 APP_USER="app"
 
-echo "=== [1/6] Installing Docker ==="
+echo "=== [1/5] Installing Docker ==="
 if ! command -v docker &>/dev/null; then
   apt-get update
   apt-get install -y ca-certificates curl gnupg
@@ -20,10 +20,9 @@ https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_C
   apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 fi
 
-echo "=== [2/6] Installing Nginx ==="
-apt-get install -y nginx
+systemctl disable --now nginx 2>/dev/null || true
 
-echo "=== [3/6] Creating users ==="
+echo "=== [2/5] Creating users ==="
 id -u "$APP_USER" &>/dev/null || useradd -r -m -s /bin/bash "$APP_USER"
 usermod -aG docker "$APP_USER"
 
@@ -34,7 +33,7 @@ for USER_NAME in student teacher; do
   chage -d 0 "$USER_NAME"
 done
 
-echo "=== [4/6] Cloning repository ==="
+echo "=== [3/5] Cloning repository ==="
 mkdir -p "$APP_DIR"
 chown "$APP_USER":"$APP_USER" "$APP_DIR"
 if [ -d "$APP_DIR/.git" ]; then
@@ -43,14 +42,13 @@ else
   sudo -u "$APP_USER" git clone "$REPO_URL" "$APP_DIR"
 fi
 
-echo "=== [5/6] Configuring Nginx ==="
-cp "$APP_DIR/deploy/nginx.conf" /etc/nginx/sites-available/mywebapp
-ln -sf /etc/nginx/sites-available/mywebapp /etc/nginx/sites-enabled/mywebapp
-rm -f /etc/nginx/sites-enabled/default
-nginx -t
-systemctl enable --now nginx
+echo "=== [4/5] Configuring env file ==="
+mkdir -p /etc/mywebapp
+if [ ! -f /etc/mywebapp/env ]; then
+  echo "DB_PASSWORD=yourpassword" > /etc/mywebapp/env
+fi
 
-echo "=== [6/6] Configuring systemd ==="
+echo "=== [5/5] Configuring systemd ==="
 cp "$APP_DIR/deploy/mywebapp-docker.service" /etc/systemd/system/mywebapp.service
 systemctl daemon-reload
 systemctl enable mywebapp
