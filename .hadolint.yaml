@@ -1,0 +1,4 @@
+# Hadolint configuration
+ignored:
+  - DL3018  # Allow apk add without --no-cache (using alpine)
+failure-threshold: warning
