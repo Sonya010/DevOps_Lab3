@@ -1,24 +1,31 @@
 name: CD
 
 on:
-  push:
-    tags: ["v*.*.*"]
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches-ignore: []
 
 jobs:
   deploy:
     name: Deploy to Target VM
     runs-on: self-hosted
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      startsWith(github.event.workflow_run.head_branch, 'refs/tags/v')
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Deploy to target VM via SSH
         env:
           SSH_KEY: ${{ secrets.TARGET_SSH_KEY }}
           TARGET_HOST: ${{ secrets.TARGET_HOST }}
           TARGET_USER: ${{ secrets.TARGET_USER }}
-          IMAGE_TAG: ${{ github.ref_name }}
+          IMAGE_TAG: ${{ github.event.workflow_run.head_branch }}
         run: |
           mkdir -p ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/deploy_key
@@ -28,11 +35,10 @@ jobs:
           ssh -i ~/.ssh/deploy_key "${TARGET_USER}@${TARGET_HOST}" bash <<EOF
             set -euo pipefail
             cd /opt/mywebapp
-            export IMAGE_TAG="${IMAGE_TAG}"
             sed -i "s|image: ghcr.io/sonya010/devops_lab3:.*|image: ghcr.io/sonya010/devops_lab3:stable|g" docker-compose.yml
             docker compose pull
             docker compose up -d --remove-orphans
-            echo "Deployment done: tag=${IMAGE_TAG}"
+            echo "Deployment done"
           EOF
 
           rm -f ~/.ssh/deploy_key
@@ -57,4 +63,3 @@ jobs:
         if: failure()
         run: |
           echo "Deployment or verification failed!"
-          echo "Tag: ${{ github.ref_name }}"
