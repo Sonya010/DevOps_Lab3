@@ -7,3 +7,5 @@ rules:
     level: warning
   truthy:
     allowed-values: ["true", "false"]
+    level: warning
+  document-start: disable
