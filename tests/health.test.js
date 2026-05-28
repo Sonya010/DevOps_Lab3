@@ -43,7 +43,7 @@ describe('Health endpoints', () => {
 
   test('GET /health/alive returns 200 OK', async () => {
     const res = await request(app).get('/health/alive');
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(999);
     expect(res.text).toBe('OK');
   });
 
