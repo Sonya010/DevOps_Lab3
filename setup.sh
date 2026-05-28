@@ -44,7 +44,7 @@ sudo cp -r /tmp/mywebapp-clone/* /opt/mywebapp/
 sudo cp -r /tmp/mywebapp-clone/.* /opt/mywebapp/ 2>/dev/null
 sudo rm -rf /tmp/mywebapp-clone
 sudo chown -R app:app /opt/mywebapp
-cd /opt/mywebapp
+cd /opt/mywebapp || exit 1
 sudo -u app npm install
 
 # 5. Configuration files
@@ -89,4 +89,4 @@ EOF
 echo "Setup completed successfully!"
 
 # 9. Lock default user
-usermod -L $SUDO_USER
+usermod -L "$SUDO_USER"

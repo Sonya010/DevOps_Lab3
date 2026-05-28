@@ -1,6 +1,6 @@
 name: CD
 
-on:
+"on":
   workflow_run:
     workflows: ["CI"]
     types: [completed]
@@ -34,7 +34,8 @@ jobs:
           ssh -i ~/.ssh/deploy_key "${TARGET_USER}@${TARGET_HOST}" bash <<EOF
             set -euo pipefail
             cd /opt/mywebapp
-            sed -i "s|image: ghcr.io/sonya010/devops_lab3:.*|image: ghcr.io/sonya010/devops_lab3:stable|g" docker-compose.yml
+            IMG="ghcr.io/sonya010/devops_lab3"
+            sed -i "s|image: ${IMG}:.*|image: ${IMG}:stable|g" docker-compose.yml
             docker compose pull
             docker compose up -d --remove-orphans
             echo "Deployment done"
