@@ -2,15 +2,6 @@
 
 Node.js Task Tracker застосунок з повним CI/CD pipeline на базі GitHub Actions.
 
-## Мета
-
-Налаштувати автоматичне тестування, розгортання та валідацію проєкту:
-- Статичний аналіз коду (ESLint, Hadolint, ShellCheck, YAMLlint)
-- Автоматичні тести з перевіркою покриття (Jest, coverage ≥ 40%)
-- Збірка Docker-образу та публікація в GitHub Container Registry
-- Автоматичне розгортання на target VM через self-hosted runner
-- Верифікація після розгортання
-
 ## Технічний стек
 
 - **Застосунок**: Node.js + Express.js + PostgreSQL
@@ -140,3 +131,35 @@ npm test
 | Push до `main` | ✅ | ✅ | ✅ | ❌ |
 | Pull Request до `main` | ✅ | ✅ | ❌ | ❌ |
 | Анотований тег `v*.*.*` | ✅ | ✅ | ✅ | ✅ |
+
+## Запуск деплою
+
+Деплой запускається тільки через анотований тег:
+
+```bash
+git tag -a v1.0.0 -m "Release 1.0.0"
+git push origin v1.0.0
+```
+
+Порядок виконання: CI (lint → test → build + push image) → CD (deploy → verify).
+
+## Branch Protection Rules
+
+У репозиторії налаштований захист гілки `main`:
+- Злиття тільки через PR
+- Обов'язкові перевірки: `Lint`, `Test`
+- Merge заблокований при падінні CI
+
+## Ручна верифікація на target VM
+
+```bash
+curl http://localhost/health/alive   # має повернути: OK
+curl http://localhost/health/ready   # має повернути: OK
+curl http://localhost/tasks          # має повернути: []
+docker compose ps                   # всі сервіси Up
+```
+
+## Coverage звіт
+
+Artifact `coverage-report` завантажується автоматично з кожного запуску CI.
+Мінімальне покриття — 40%. Поточне покриття — ~61%.
